@@ -1,0 +1,142 @@
+SECTION,MORPHIX-GUARD-SPEC
+  # Purpose: Morphix neuromorphic-intelligence guard as a non-actuating,
+  # fairness-safety observer over CapabilityState, RoH, BiophysicalEnvelopeSnapshot,
+  # TreeOfLifeView, and MicroSociety predicates. [file:10][file:14][file:17]
+
+  ROLE,observer-only
+  PATTERN,Pattern-I-analytics
+  HEXSTAMP,0xMORPHIX-GUARD-NOACT
+
+  MUST_NOT,
+    # No actuation or policy mutation.
+    mutate-CapabilityState,
+    mutate-ConsentState,
+    mutate-RoH-model,
+    mutate-BiophysicalEnvelopeSpec,
+    mutate-PolicyStack,
+    mutate-ReversalConditions,
+    write-.stake.aln,
+    write-.rohmodel.aln,
+    write-.neuro-cap.aln,
+    write-.donutloop.aln,
+    write-.evolve.jsonl,
+    call-CapabilityTransitionRequest,
+    call-ReversalConditions,
+
+  MAY,
+    read-CapabilityState,
+    read-RoH,
+    read-BiophysicalEnvelopeSnapshot,
+    read-TreeOfLifeView,
+    read-MicroSociety-NATURE-predicates,
+    emit-MorphixGuardView-diagnostics,
+    serialize-diagnostics-into-.evolve.jsonl,
+    serialize-diagnostics-into-.donutloop.aln,
+
+END-SECTION
+
+SECTION,MORPHIX-GUARD-CONFIG
+  # Advisory thresholds for MorphixGuardConfig; values are conservative defaults
+  # and may be tightened by governance. They never act directly on capability. [file:10]
+
+  FIELD,decay_boundary_thresh,F32,0.70
+  FIELD,lifeforce_fair_floor,F32,0.50
+  FIELD,power_unfair_thresh,F32,0.70
+  FIELD,fear_overload_thresh,F32,0.60
+  FIELD,pain_overload_thresh,F32,0.60
+
+  PROVENANCE,
+    source-Tree-of-Life.md/TREE-DECAY,
+    source-Tree-of-Life.md/TREE-LIFEFORCE,
+    source-Tree-of-Life.md/TREE-POWER,
+    source-Tree-of-Life.md/TREE-FEAR,
+    source-Tree-of-Life.md/TREE-PAIN,
+    source-.rohmodel.aln,
+
+  GOVERNANCE,
+    config-owner,Host+OrganicCPU,
+    change-path,.evolve.jsonl+guard-pipeline,
+    effect,diagnostic-labels-only,
+
+END-SECTION
+
+SECTION,MORPHIX-GUARD-LABELS
+  # Mapping between label names and dimensions; purely diagnostic. [file:10]
+
+  LABEL,D1_FAIR,
+    dimension,D1,
+    description,"Overall fair: lifeforce above floor, decay below boundary.",
+    sources,TreeOfLife.lifeforce,TreeOfLife.decay,RoH.value,
+
+  LABEL,D1_UNFAIR_DRAIN_RISK,
+    dimension,D1,
+    description,"Overall unfair-drain risk: depleted lifeforce or high decay.",
+    sources,TreeOfLife.lifeforce,TreeOfLife.decay,RoH.value,
+
+  LABEL,D3_FAIR,
+    dimension,D3,
+    description,"3D fair budget: low decay, adequate lifeforce, non-exploitative power.",
+    sources,TreeOfLife.decay,TreeOfLife.lifeforce,TreeOfLife.power,
+
+  LABEL,D3_UNFAIR_DRAIN_RISK,
+    dimension,D3,
+    description,"3D unfair drain risk: high power over low lifeforce under elevated decay.",
+    sources,TreeOfLife.decay,TreeOfLife.lifeforce,TreeOfLife.power,MetabolicDoctrine.UnfairDrain,
+
+  LABEL,D3_OVERLOAD_RISK,
+    dimension,D3,
+    description,"3D overload risk: RoH and decay near boundary; advisory cooldown.",
+    sources,TreeOfLife.decay,RoH.value,BiophysicalEnvelopeSpec.*-overload,
+
+  LABEL,D5_CALM_STABLE,
+    dimension,D5,
+    description,"5D CALM_STABLE: CALM_STABLE predicate, low decay, low fear/pain.",
+    sources,MicroSociety.CALM_STABLE,TreeOfLife.decay,TreeOfLife.fear,TreeOfLife.pain,
+
+  LABEL,D5_BOUNDARY_SKIMMING,
+    dimension,D5,
+    description,"5D boundary skimming: boundary-skimming predicate and decay near ceiling.",
+    sources,MicroSociety.BOUNDARY_SKIMMING,TreeOfLife.decay,RoH.value,
+
+  LABEL,D5_UNFAIR_DRAIN_CONFIRMED,
+    dimension,D5,
+    description,"5D unfair drain confirmed: UNFAIR_DRAIN predicate, low lifeforce, high power.",
+    sources,MicroSociety.UNFAIR_DRAIN,TreeOfLife.lifeforce,TreeOfLife.power,
+
+  LABEL,D5_OVERLOADED_RECOVERY_WINDOW,
+    dimension,D5,
+    description,"5D overloaded recovery window: OVERLOADED predicate, high fear/pain, RoH < ceiling.",
+    sources,MicroSociety.OVERLOADED,TreeOfLife.fear,TreeOfLife.pain,RoH.value,
+
+  POLICY,
+    role,diagnostics-only,
+    non-policy,true,
+    non-reward,true,
+    non-consent,true,
+
+END-SECTION
+
+SECTION,MORPHIX-GUARD-INTEGRATION
+  # Integration contract with canonical streams; logging-only. [file:14][file:17]
+
+  STREAM,.evolve.jsonl
+    CARRIER,epoch-record
+    FIELD,capability_state,CapabilityState
+    FIELD,roh_value,F32
+    FIELD,evolve_index,U64?
+    FIELD,epoch_index,U64?
+    FIELD,morphix_guard,MorphixGuardView
+
+  STREAM,.donutloop.aln
+    CARRIER,decision-record
+    FIELD,capability_state_after,CapabilityState
+    FIELD,roh_after,F32
+    FIELD,morphix_guard,MorphixGuardView?
+
+  INVARIANTS,
+    no-direct-writes-by-MorphixGuard,
+    MorphixGuardView-appended-only-via-sovereignty-logging-layer,
+    RoH-ceiling-enforced-by-.rohmodel.aln-and-kernel,
+    CapabilityState-transitions-enforced-by-PolicyEngine-and-ReversalConditions,
+
+END-SECTION

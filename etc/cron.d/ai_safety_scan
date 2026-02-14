@@ -1,2 +1,0 @@
-# File: /etc/cron.d/ai_safety_scan
-*/10 * * * * root /opt/ai/scan_and_correct.sh --scope=network,storage,ai-interfaces,knowledgebase
